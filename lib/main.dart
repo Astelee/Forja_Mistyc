@@ -12,6 +12,7 @@ const bgLogin = 'assets/bg_login.jpg';
 
 const gold = Color(0xFFF0C968);
 const goldDk = Color(0xFF9A6B1F);
+const emerald = Color(0xFF39E07A);
 final langN = ValueNotifier<String>('pt');
 late SharedPreferences prefs;
 
@@ -30,6 +31,8 @@ const _t = <String, Map<String, String>>{
     'acceptTerms': 'Aceite os Termos de Uso.',
     'supporttxt': 'Configure aqui o contato oficial de suporte.',
     'welcome': 'Bem-vindo ao Forja Mistyc!',
+    'events': 'Eventos', 'ranking': 'Ranking', 'news': 'Novidades', 'config': 'Config.',
+    'tagline': 'Forja Mistyc — Sua lenda começa aqui!', 'ver': 'Versão',
     'welcome2': 'Conquiste novos reinos, fortaleça seu castelo e faça parte dessa jornada épica!',
   },
   'en': {
@@ -46,6 +49,8 @@ const _t = <String, Map<String, String>>{
     'acceptTerms': 'Accept the Terms of Use.',
     'supporttxt': 'Set the official support contact here.',
     'welcome': 'Welcome to Forja Mistyc!',
+    'events': 'Events', 'ranking': 'Ranking', 'news': 'News', 'config': 'Settings',
+    'tagline': 'Forja Mistyc — Your legend begins here!', 'ver': 'Version',
     'welcome2': 'Conquer new realms, strengthen your castle and join this epic journey!',
   },
   'es': {
@@ -62,6 +67,8 @@ const _t = <String, Map<String, String>>{
     'acceptTerms': 'Acepta los Términos de Uso.',
     'supporttxt': 'Configura aquí el contacto oficial de soporte.',
     'welcome': '¡Bienvenido a Forja Mistyc!',
+    'events': 'Eventos', 'ranking': 'Ranking', 'news': 'Novedades', 'config': 'Config.',
+    'tagline': 'Forja Mistyc — ¡Tu leyenda comienza aquí!', 'ver': 'Versión',
     'welcome2': '¡Conquista nuevos reinos, fortalece tu castillo y únete a esta épica aventura!',
   },
 };
@@ -136,7 +143,7 @@ class _StageState extends State<Stage> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext c) => Scaffold(
-        backgroundColor: const Color(0xFF0B1038),
+        backgroundColor: const Color(0xFF06140E),
         body: Stack(fit: StackFit.expand, children: [
           AnimatedBuilder(
               animation: ac,
@@ -145,7 +152,7 @@ class _StageState extends State<Stage> with SingleTickerProviderStateMixin {
                   child: Image.asset(widget.bg, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(
                       decoration: const BoxDecoration(gradient: LinearGradient(
                           begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                          colors: [Color(0xFF0B1038), Color(0xFF3B3A8C), Color(0xFFF2A65A)])))))),
+                          colors: [Color(0xFF06140E), Color(0xFF1F5A3A), Color(0xFFE8C26A)])))))),
           IgnorePointer(child: AnimatedBuilder(
               animation: ac, builder: (_, __) => CustomPaint(painter: Sparkles(ac.value)))),
           SafeArea(child: widget.child),
@@ -177,19 +184,87 @@ class Sparkles extends CustomPainter {
 class GoldBox extends StatelessWidget {
   final Widget child;
   final double? width;
-  const GoldBox({super.key, required this.child, this.width});
+  final bool crest;
+  const GoldBox({super.key, required this.child, this.width, this.crest = false});
   @override
-  Widget build(BuildContext c) => Container(
-        width: width,
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-        decoration: BoxDecoration(
-            gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [Color(0xEE1B2650), Color(0xF00A1028)]),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: gold, width: 1.6),
-            boxShadow: const [BoxShadow(color: Color(0x66F0C968), blurRadius: 22)]),
-        child: child,
-      );
+  Widget build(BuildContext c) {
+    final box = CustomPaint(
+        foregroundPainter: crest ? CornerPainter() : null,
+        child: Container(
+          width: width,
+          padding: EdgeInsets.fromLTRB(18, crest ? 24 : 14, 18, 14),
+          decoration: BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Color(0xF01C4A2B), Color(0xF40B2415)]),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD9AE45), width: 2),
+              boxShadow: const [BoxShadow(color: Color(0xFF1F6B3A), spreadRadius: 3), BoxShadow(color: Color(0x6639E07A), spreadRadius: 3, blurRadius: 22)]),
+          child: child,
+        ));
+    if (!crest) return box;
+    return Stack(clipBehavior: Clip.none, alignment: Alignment.topCenter, children: [
+      Padding(padding: const EdgeInsets.only(top: 16), child: box),
+      CustomPaint(size: const Size(150, 32), painter: CrestPainter()),
+    ]);
+  }
+}
+
+// Cantos dourados do painel
+class CornerPainter extends CustomPainter {
+  @override
+  void paint(Canvas cv, Size s) {
+    final p = Paint()..color = gold..style = PaintingStyle.stroke..strokeWidth = 3..strokeCap = StrokeCap.round;
+    void c(double x, double y, double dx, double dy) {
+      cv.drawLine(Offset(x, y), Offset(x + dx * 20, y), p);
+      cv.drawLine(Offset(x, y), Offset(x, y + dy * 20), p);
+      cv.drawCircle(Offset(x + dx * 6, y + dy * 6), 2.4, Paint()..color = gold);
+    }
+    c(-3, -3, 1, 1); c(s.width + 3, -3, -1, 1);
+    c(-3, s.height + 3, 1, -1); c(s.width + 3, s.height + 3, -1, -1);
+  }
+  @override
+  bool shouldRepaint(CornerPainter o) => false;
+}
+
+// Brasão: asas douradas + gema esmeralda (usado no painel e no logo)
+class CrestPainter extends CustomPainter {
+  final double gap, span;
+  final bool dual;
+  CrestPainter({this.gap = 14, this.span = 56, this.dual = false});
+  void _gem(Canvas cv, Offset o, double z) {
+    final g = Path()..moveTo(o.dx, o.dy - z)..lineTo(o.dx + z * .7, o.dy)..lineTo(o.dx, o.dy + z)..lineTo(o.dx - z * .7, o.dy)..close();
+    cv.drawCircle(o, z * 1.4, Paint()..color = const Color(0x6639E07A)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    cv.drawPath(g, Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFFB8FFD0), Color(0xFF138A4A)]).createShader(Rect.fromCenter(center: o, width: z * 1.4, height: z * 2)));
+    cv.drawPath(g, Paint()..style = PaintingStyle.stroke..strokeWidth = 1.8..color = gold);
+  }
+
+  @override
+  void paint(Canvas cv, Size s) {
+    final cx = s.width / 2, cy = s.height / 2;
+    final gp = Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFF2B0), Color(0xFFB8801F)]).createShader(Offset.zero & s);
+    for (final d in [-1.0, 1.0]) {
+      for (var i = 0; i < 3; i++) {
+        final len = span - i * 11.0, y = cy + i * 5.0 - 6;
+        cv.drawPath(
+            Path()
+              ..moveTo(cx + d * gap, cy)
+              ..quadraticBezierTo(cx + d * (gap + len * .5), y - 12, cx + d * (gap + len), y - 2)
+              ..quadraticBezierTo(cx + d * (gap + len * .5), y + 3, cx + d * gap, cy + 3),
+            gp);
+      }
+    }
+    if (dual) {
+      _gem(cv, Offset(cx, 9), 8);
+      _gem(cv, Offset(cx, s.height - 9), 8);
+    } else {
+      _gem(cv, Offset(cx, cy), 12);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CrestPainter o) => false;
 }
 
 class Title extends StatelessWidget {
@@ -207,28 +282,85 @@ class Title extends StatelessWidget {
       ]));
 }
 
-class RedButton extends StatelessWidget {
+class Btn extends StatelessWidget {
   final String text;
   final VoidCallback? onTap;
   final bool small;
-  const RedButton(this.text, this.onTap, {super.key, this.small = false});
-  @override
-  Widget build(BuildContext c) => GestureDetector(
-      onTap: onTap,
+  const Btn(this.text, this.onTap, {super.key, this.small = false});
+  Widget _d(double z) => Transform.rotate(
+      angle: pi / 4,
       child: Container(
-        height: small ? 40 : 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: onTap == null
-                    ? [Colors.grey.shade700, Colors.grey.shade900]
-                    : const [Color(0xFFE53A1E), Color(0xFF8E0F0F)]),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: gold, width: 2),
-            boxShadow: const [BoxShadow(color: Color(0x88FF5A2A), blurRadius: 14)]),
-        child: Text(text, style: TextStyle(color: gold, fontFamily: 'serif', fontWeight: FontWeight.w900,
-            fontSize: small ? 16 : 24, shadows: const [Shadow(color: Colors.black, blurRadius: 4)])),
-      ));
+          width: z, height: z,
+          decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFFFF2B0), Color(0xFFB8801F)]),
+              border: Border.all(color: const Color(0xFF5A3A0A)))));
+  @override
+  Widget build(BuildContext c) {
+    final on = onTap != null;
+    return GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+            height: small ? 44 : 56,
+            child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+              Container(
+                  margin: EdgeInsets.symmetric(horizontal: 9, vertical: small ? 3 : 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                          colors: on ? const [Color(0xFF3F9A5A), Color(0xFF14522E)] : [Colors.grey.shade700, Colors.grey.shade900]),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: gold, width: 2),
+                      boxShadow: const [BoxShadow(color: Color(0x8839E07A), blurRadius: 14)]),
+                  child: Text(text, style: TextStyle(color: gold, fontFamily: 'serif', fontWeight: FontWeight.w900,
+                      fontSize: small ? 16 : 25, shadows: const [Shadow(color: Colors.black, blurRadius: 4)]))),
+              Positioned(left: 2, child: _d(small ? 11 : 14)),
+              Positioned(right: 2, child: _d(small ? 11 : 14)),
+              Positioned(top: 0, child: _d(9)),
+            ])));
+  }
+}
+
+// Botões do topo (sem função por enquanto)
+class TopBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const TopBtn(this.icon, this.label, {super.key});
+  @override
+  Widget build(BuildContext c) => Padding(
+      padding: const EdgeInsets.only(left: 10),
+      child: InkWell(
+          onTap: () {}, // TODO: ligar a função de cada botão
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [Color(0xFF2E7A4E), Color(0xFF0C2A1C)]),
+                    border: Border.all(color: gold, width: 1.8),
+                    boxShadow: const [BoxShadow(color: Color(0x6639E07A), blurRadius: 8)]),
+                child: Icon(icon, color: gold, size: 22)),
+            Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
+          ])));
+}
+
+class Logo extends StatelessWidget {
+  const Logo({super.key});
+  @override
+  Widget build(BuildContext c) {
+    const st = TextStyle(fontSize: 34, height: .95, fontFamily: 'serif', fontWeight: FontWeight.w900);
+    return SizedBox(
+        width: 250, height: 92,
+        child: Stack(alignment: Alignment.center, children: [
+          CustomPaint(size: const Size(250, 92), painter: CrestPainter(gap: 74, span: 48, dual: true)),
+          Text('FORJA\nMISTYC', textAlign: TextAlign.center,
+              style: st.copyWith(foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 5..color = const Color(0xFF0C3A22))),
+          ShaderMask(
+              shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Color(0xFFFFF2B0), Color(0xFFD9A030), Color(0xFF8A5A14)]).createShader(r),
+              child: Text('FORJA\nMISTYC', textAlign: TextAlign.center, style: st.copyWith(color: Colors.white))),
+        ]));
+  }
 }
 
 class Fld extends StatefulWidget {
@@ -293,6 +425,7 @@ class _RegionPageState extends State<RegionPage> {
           child: SingleChildScrollView(
               child: GoldBox(
                   width: 380,
+                  crest: true,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Title(tr('region')),
                     for (final r in regions.keys)
@@ -312,7 +445,7 @@ class _RegionPageState extends State<RegionPage> {
                                     Text(r, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: sel == r ? Colors.black87 : gold)),
                                   ])))),
                     const SizedBox(height: 4),
-                    RedButton(tr('confirm'), () {
+                    Btn(tr('confirm'), () {
                       prefs.setString('region', sel);
                       Navigator.push(c, MaterialPageRoute(builder: (_) => LoginPage(region: sel)));
                     }, small: true),
@@ -404,7 +537,7 @@ class _LoginPageState extends State<LoginPage> {
                           title: Text(tr('terms'), style: const TextStyle(fontSize: 12)),
                           value: ok,
                           onChanged: (v) => set(() => ok = v ?? false)),
-                      RedButton(tr('create'), () async {
+                      Btn(tr('create'), () async {
                         if ([cu, cp, cp2, ce].any((x) => x.text.isEmpty)) return snack(dc, tr('fill'));
                         if (cp.text != cp2.text) return snack(dc, tr('match'));
                         if (!ok) return snack(dc, tr('acceptTerms'));
@@ -421,7 +554,7 @@ class _LoginPageState extends State<LoginPage> {
     final e = TextEditingController();
     boxDialog(context, tr('recover'), [
       Fld(tr('email'), e, Icons.email),
-      Builder(builder: (dc) => RedButton(tr('send'), () async {
+      Builder(builder: (dc) => Btn(tr('send'), () async {
             if (e.text.isEmpty) return snack(dc, tr('fill'));
             try {
               await api.recover(e.text.trim());
@@ -444,74 +577,75 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext c) {
-    final w = MediaQuery.of(c).size.width;
+    final m = MediaQuery.of(c);
+    final w = m.size.width;
+    final availH = max(120.0, m.size.height - m.padding.vertical - 64 - 34);
+    final dw = (w * .38).clamp(310.0, 430.0);
     final s = list[sel];
+    final panel = GoldBox(
+        width: dw,
+        crest: true,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Title(tr('server')),
+          InkWell(
+              onTap: pickServer,
+              child: Container(
+                  height: 42,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8), border: Border.all(color: gold)),
+                  child: Row(children: [
+                    Icon(Icons.circle, size: 14, color: statusCol[s.status]),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                    _signal(s),
+                    const Icon(Icons.keyboard_arrow_down, color: gold),
+                  ]))),
+          Fld(tr('user'), u, Icons.person),
+          Fld(tr('pass'), p, Icons.lock, secret: true),
+          Row(children: [
+            SizedBox(width: 28, height: 28, child: Checkbox(value: remember, activeColor: const Color(0xFF2E9E5B), onChanged: (v) => setState(() => remember = v ?? true))),
+            const SizedBox(width: 6),
+            Expanded(child: Text(tr('remember'), style: const TextStyle(fontSize: 11))),
+            InkWell(onTap: langMenu, child: Text('${tr('lang')} ▾', style: const TextStyle(color: Color(0xFF6FC3FF), fontSize: 12, decoration: TextDecoration.underline))),
+          ]),
+          const SizedBox(height: 8),
+          Btn(busy ? '...' : tr('enter'), busy || s.status == 2 ? null : go),
+          const SizedBox(height: 6),
+          Row(children: [
+            action(Icons.person_add, tr('create'), createDialog),
+            action(Icons.restart_alt, tr('recover'), recoverDialog),
+            action(Icons.headset_mic, tr('support'), () => boxDialog(c, tr('support'), [
+                  Text(tr('supporttxt'), textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  Builder(builder: (dc) => Btn(tr('ok'), () => Navigator.pop(dc), small: true)),
+                ])),
+          ]),
+        ]));
     return Stage(
         bg: bgLogin,
         child: Stack(children: [
-          // logo
-          Positioned(
-              left: 24, top: 8,
-              child: Stack(children: [
-                Text('FORJA\nMISTYC', style: TextStyle(fontSize: 46, height: .95, fontFamily: 'serif', fontWeight: FontWeight.w900,
-                    foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 5..color = const Color(0xFF1B2A6B))),
-                ShaderMask(
-                    shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                        colors: [Color(0xFFFFF2B0), Color(0xFFD9A030), Color(0xFF8A5A14)]).createShader(r),
-                    child: const Text('FORJA\nMISTYC', style: TextStyle(fontSize: 46, height: .95, fontFamily: 'serif', fontWeight: FontWeight.w900, color: Colors.white))),
-              ])),
+          Positioned(left: 50, top: 2, child: const Logo()),
           Positioned(left: 4, top: 4, child: IconButton(icon: const Icon(Icons.arrow_back, color: gold), onPressed: () => Navigator.pop(c))),
-          // painel de login
-          Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                  padding: const EdgeInsets.only(right: 18),
-                  child: SingleChildScrollView(
-                      child: GoldBox(
-                          width: (w * .38).clamp(310.0, 430.0),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Title(tr('server')),
-                            InkWell(
-                                onTap: pickServer,
-                                child: Container(
-                                    height: 42,
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: gold)),
-                                    child: Row(children: [
-                                      Icon(Icons.circle, size: 14, color: statusCol[s.status]),
-                                      const SizedBox(width: 10),
-                                      Expanded(child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      _signal(s),
-                                      const Icon(Icons.keyboard_arrow_down, color: gold),
-                                    ]))),
-                            Fld(tr('user'), u, Icons.person),
-                            Fld(tr('pass'), p, Icons.lock, secret: true),
-                            Row(children: [
-                              SizedBox(width: 28, height: 28, child: Checkbox(value: remember, onChanged: (v) => setState(() => remember = v ?? true))),
-                              const SizedBox(width: 6),
-                              Expanded(child: Text(tr('remember'), style: const TextStyle(fontSize: 11))),
-                              InkWell(onTap: langMenu, child: Text('${tr('lang')} ▾', style: const TextStyle(color: Color(0xFF6FC3FF), fontSize: 12, decoration: TextDecoration.underline))),
-                            ]),
-                            const SizedBox(height: 8),
-                            RedButton(busy ? '...' : tr('enter'), busy || s.status == 2 ? null : go),
-                            const SizedBox(height: 6),
-                            Row(children: [
-                              action(Icons.person_add, tr('create'), createDialog),
-                              action(Icons.restart_alt, tr('recover'), recoverDialog),
-                              action(Icons.headset_mic, tr('support'), () => boxDialog(c, tr('support'), [
-                                    Text(tr('supporttxt'), textAlign: TextAlign.center),
-                                    const SizedBox(height: 10),
-                                    Builder(builder: (dc) => RedButton(tr('ok'), () => Navigator.pop(dc), small: true)),
-                                  ])),
-                            ]),
-                          ]))))),
-          // boas-vindas + versão
           Positioned(
-              left: 0, bottom: 0,
+              top: 6, right: 14,
+              child: Row(children: [
+                TopBtn(Icons.card_giftcard, tr('events')),
+                TopBtn(Icons.emoji_events, tr('ranking')),
+                TopBtn(Icons.article, tr('news')),
+                TopBtn(Icons.settings, tr('config')),
+              ])),
+          // painel 20% menor (escala 0.8), encolhe mais se a tela for baixa
+          Positioned(
+              top: 64, bottom: 34, right: 18,
+              child: Align(
+                  alignment: Alignment.centerRight,
+                  child: SingleChildScrollView(
+                      child: SizedBox(width: dw * .8, height: availH, child: FittedBox(fit: BoxFit.scaleDown, child: panel))))),
+          Positioned(
+              left: 0, bottom: 28,
               child: Container(
-                  width: w * .55,
+                  width: w * .5,
                   padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
                   decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xDD000000), Color(0x00000000)])),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -521,7 +655,17 @@ class _LoginPageState extends State<LoginPage> {
                       Expanded(child: Text(tr('welcome'), style: const TextStyle(color: gold, fontWeight: FontWeight.bold, fontSize: 13))),
                     ]),
                     Text(tr('welcome2'), style: const TextStyle(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis),
-                    Text('Versão $version', style: const TextStyle(fontSize: 10, color: Colors.white60)),
+                  ]))),
+          Positioned(
+              left: 0, right: 0, bottom: 0, height: 28,
+              child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: const BoxDecoration(color: Color(0xCC000000), border: Border(top: BorderSide(color: Color(0x88F0C968)))),
+                  child: Row(children: [
+                    Text('◆ ${tr('ver')} $version', style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                    const Spacer(),
+                    Flexible(child: Text('◆ ${tr('tagline')} ◆', overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, color: gold, fontStyle: FontStyle.italic, fontFamily: 'serif'))),
                   ]))),
         ]));
   }
