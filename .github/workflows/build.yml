@@ -23,6 +23,8 @@ jobs:
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' $M
           sed -i 's#android:label="[^"]*"#android:label="Forja Mistyc"#' $M
+      - name: Ícone do app
+        run: cp -r android_res/. android/app/src/main/res/
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
