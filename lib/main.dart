@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ============ CONFIG ============
 // URL base da API de autenticação REAL. Vazia = "API não configurada".
@@ -9,6 +11,11 @@ const String apiBaseUrl = '';
 const String version = '1.0.0';
 const bgRegiao = 'assets/bg_regiao.jpg';
 const bgLogin = 'assets/bg_login.jpg';
+// Música de fundo (stream da internet). Troque a URL quando quiser.
+const musicUrl = 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Heroic%20Age.mp3';
+const musicCredit = 'Heroic Age — Kevin MacLeod (incompetech.com), CC BY 4.0';
+// Links do "Siga-nos". Vazio = "Link não configurado".
+const linkSite = '', linkFacebook = '', linkDiscord = '', linkTwitter = '', linkYoutube = '';
 
 const gold = Color(0xFFF0C968);
 const goldDk = Color(0xFF9A6B1F);
@@ -33,6 +40,12 @@ const _t = <String, Map<String, String>>{
     'welcome': 'Bem-vindo ao Forja Mistyc!',
     'events': 'Eventos', 'ranking': 'Ranking', 'news': 'Novidades', 'config': 'Config.',
     'tagline': 'Forja Mistyc — Sua lenda começa aqui!', 'ver': 'Versão',
+    'latest': 'Últimas Atualizações', 'announcements': 'Anúncios', 'settings': 'Configurações', 'languages': 'Idiomas',
+    'audio': 'Áudio', 'account': 'Conta', 'follow': 'Siga-nos', 'music': 'Música', 'effects': 'Efeitos',
+    'changeAcc': 'Mudar de conta', 'changeReg': 'Mudar de região', 'site': 'Site Oficial', 'like': 'Curtir',
+    'linkoff': 'Link não configurado.', 'close': 'Fechar', 'all': 'Todas', 'updates': 'atualizações',
+    'details': 'Ver detalhes', 'less': 'Ocultar', 't0': 'Atualização', 't1': 'Novo conteúdo', 't2': 'Evento',
+    't3': 'Correção', 't4': 'Manutenção', 't5': 'Aviso', 'example': 'EXEMPLO',
     'welcome2': 'Conquiste novos reinos, fortaleça seu castelo e faça parte dessa jornada épica!',
   },
   'en': {
@@ -51,6 +64,12 @@ const _t = <String, Map<String, String>>{
     'welcome': 'Welcome to Forja Mistyc!',
     'events': 'Events', 'ranking': 'Ranking', 'news': 'News', 'config': 'Settings',
     'tagline': 'Forja Mistyc — Your legend begins here!', 'ver': 'Version',
+    'latest': 'Latest Updates', 'announcements': 'Announcements', 'settings': 'Settings', 'languages': 'Languages',
+    'audio': 'Audio', 'account': 'Account', 'follow': 'Follow us', 'music': 'Music', 'effects': 'Effects',
+    'changeAcc': 'Switch account', 'changeReg': 'Change region', 'site': 'Website', 'like': 'Like',
+    'linkoff': 'Link not configured.', 'close': 'Close', 'all': 'All', 'updates': 'updates',
+    'details': 'View details', 'less': 'Hide', 't0': 'Update', 't1': 'New content', 't2': 'Event',
+    't3': 'Fix', 't4': 'Maintenance', 't5': 'Notice', 'example': 'EXAMPLE',
     'welcome2': 'Conquer new realms, strengthen your castle and join this epic journey!',
   },
   'es': {
@@ -69,10 +88,16 @@ const _t = <String, Map<String, String>>{
     'welcome': '¡Bienvenido a Forja Mistyc!',
     'events': 'Eventos', 'ranking': 'Ranking', 'news': 'Novedades', 'config': 'Config.',
     'tagline': 'Forja Mistyc — ¡Tu leyenda comienza aquí!', 'ver': 'Versión',
+    'latest': 'Últimas Actualizaciones', 'announcements': 'Anuncios', 'settings': 'Configuración', 'languages': 'Idiomas',
+    'audio': 'Audio', 'account': 'Cuenta', 'follow': 'Síguenos', 'music': 'Música', 'effects': 'Efectos',
+    'changeAcc': 'Cambiar de cuenta', 'changeReg': 'Cambiar de región', 'site': 'Sitio Oficial', 'like': 'Me gusta',
+    'linkoff': 'Enlace no configurado.', 'close': 'Cerrar', 'all': 'Todas', 'updates': 'actualizaciones',
+    'details': 'Ver detalles', 'less': 'Ocultar', 't0': 'Actualización', 't1': 'Nuevo contenido', 't2': 'Evento',
+    't3': 'Corrección', 't4': 'Mantenimiento', 't5': 'Aviso', 'example': 'EJEMPLO',
     'welcome2': '¡Conquista nuevos reinos, fortalece tu castillo y únete a esta épica aventura!',
   },
 };
-String tr(String k) => _t[langN.value]?[k] ?? _t['pt']![k] ?? k;
+String tr(String k) => _t[langN.value]?[k] ?? _t['en']![k] ?? k;
 
 // ============ API (integração futura) ============
 class AuthApi {
@@ -108,6 +133,10 @@ Future<void> main() async {
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   prefs = await SharedPreferences.getInstance();
   langN.value = prefs.getString('lang') ?? 'pt';
+  musicOn.value = prefs.getBool('musicOn') ?? true;
+  musicVol.value = prefs.getDouble('musicVol') ?? .5;
+  fxOn.value = prefs.getBool('fxOn') ?? true;
+  fxVol.value = prefs.getDouble('fxVol') ?? .5;
   runApp(const App());
 }
 
@@ -324,12 +353,13 @@ class Btn extends StatelessWidget {
 class TopBtn extends StatelessWidget {
   final IconData icon;
   final String label;
-  const TopBtn(this.icon, this.label, {super.key});
+  final VoidCallback? onTap;
+  const TopBtn(this.icon, this.label, {super.key, this.onTap});
   @override
   Widget build(BuildContext c) => Padding(
       padding: const EdgeInsets.only(left: 10),
       child: InkWell(
-          onTap: () {}, // TODO: ligar a função de cada botão
+          onTap: onTap ?? () {}, // sem função por enquanto quando onTap é nulo
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
                 width: 40, height: 40,
@@ -409,6 +439,377 @@ Future<void> boxDialog(BuildContext c, String title, List<Widget> body) => showD
             constraints: const BoxConstraints(maxWidth: 400),
             child: GoldBox(child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [Title(title), ...body]))))));
 
+// ============ ÁUDIO ============
+final musicOn = ValueNotifier<bool>(true), fxOn = ValueNotifier<bool>(true);
+final musicVol = ValueNotifier<double>(.5), fxVol = ValueNotifier<double>(.5);
+
+class Bgm {
+  static final _p = AudioPlayer();
+  static bool _started = false;
+  static Future<void> start() async {
+    try {
+      await _p.setReleaseMode(ReleaseMode.loop);
+      await _p.setVolume(musicVol.value);
+      if (musicOn.value) {
+        await _p.play(UrlSource(musicUrl));
+        _started = true;
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> apply() async {
+    try {
+      await _p.setVolume(musicVol.value);
+      if (!musicOn.value) {
+        await _p.pause();
+      } else if (_started) {
+        await _p.resume();
+      } else {
+        await start();
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> pause() async {
+    try {
+      await _p.pause();
+    } catch (_) {}
+  }
+
+  static Future<void> resume() async {
+    if (!musicOn.value || !_started) return;
+    try {
+      await _p.resume();
+    } catch (_) {}
+  }
+
+  static Future<void> stop() async {
+    try {
+      await _p.stop();
+      _started = false;
+    } catch (_) {}
+  }
+}
+
+const langs = <String, String>{
+  'zh': '中文繁體', 'en': 'English', 'es': 'Español',
+  'pt': 'Português', 'tr': 'Türkçe', 'fr': 'Français',
+  'de': 'Deutsch', 'ru': 'Русский', 'id': 'Bahasa Indonesia',
+  'th': 'ภาษาไทย', 'pl': 'Polski', 'nl': 'Nederlands',
+};
+
+Future<void> openLink(BuildContext c, String url) async {
+  if (url.isEmpty) {
+    snack(c, tr('linkoff'));
+    return;
+  }
+  try {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    if (c.mounted) snack(c, tr('linkoff'));
+  }
+}
+
+// ============ CONFIGURAÇÕES (Idiomas, Áudio, Conta, Siga-nos) ============
+void openSettings(BuildContext c, {int tab = 0, VoidCallback? onChangeAccount, VoidCallback? onChangeRegion}) =>
+    showDialog(
+        context: c,
+        builder: (_) => SettingsDialog(tab: tab, onChangeAccount: onChangeAccount, onChangeRegion: onChangeRegion));
+
+class SettingsDialog extends StatefulWidget {
+  final int tab;
+  final VoidCallback? onChangeAccount, onChangeRegion;
+  const SettingsDialog({super.key, this.tab = 0, this.onChangeAccount, this.onChangeRegion});
+  @override
+  State<SettingsDialog> createState() => _SettingsDialogState();
+}
+
+class _SettingsDialogState extends State<SettingsDialog> {
+  late int tab = widget.tab;
+
+  Widget tabBtn(int i, String t) {
+    final on = tab == i;
+    return GestureDetector(
+        onTap: () => setState(() => tab = i),
+        child: Container(
+            height: 38,
+            margin: const EdgeInsets.only(bottom: 8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    colors: on ? const [Color(0xFFF3D27A), Color(0xFF9A6B1F)] : const [Color(0xFF2E7A4E), Color(0xFF14522E)]),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: on ? const Color(0xFFFFF2B0) : goldDk, width: 1.4)),
+            child: Text(t, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: on ? const Color(0xFF2A1A04) : gold))));
+  }
+
+  Widget langBtn(String code, String label) {
+    final on = langN.value == code;
+    return SizedBox(
+        width: 118,
+        child: GestureDetector(
+            onTap: () {
+              langN.value = code;
+              prefs.setString('lang', code);
+              setState(() {});
+            },
+            child: Container(
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: on ? const Color(0x55F0C968) : Colors.black38,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: on ? gold : goldDk, width: on ? 2 : 1)),
+                child: Text(label, style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.bold : FontWeight.normal)))));
+  }
+
+  Widget audioRow(String label, ValueNotifier<bool> on, ValueNotifier<double> vol, String kOn, String kVol, VoidCallback apply) =>
+      Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(children: [
+            Checkbox(
+                value: on.value,
+                activeColor: const Color(0xFF2E9E5B),
+                onChanged: (v) {
+                  on.value = v ?? true;
+                  prefs.setBool(kOn, on.value);
+                  apply();
+                  setState(() {});
+                }),
+            SizedBox(width: 62, child: Text(label, style: const TextStyle(color: gold, fontSize: 13))),
+            Expanded(
+                child: Slider(
+                    value: vol.value,
+                    activeColor: const Color(0xFF3DDC4A),
+                    inactiveColor: Colors.black54,
+                    thumbColor: gold,
+                    onChanged: (v) {
+                      vol.value = v;
+                      setState(() {});
+                      apply();
+                    },
+                    onChangeEnd: (v) => prefs.setDouble(kVol, v))),
+            SizedBox(width: 40, child: Text('${(vol.value * 100).round()}%', style: const TextStyle(fontSize: 12))),
+          ]));
+
+  Widget social(Widget icon, String label, String url) => InkWell(
+      onTap: () => openLink(context, url),
+      child: SizedBox(
+          width: 84,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+                width: 54, height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [Color(0xFF2E7A4E), Color(0xFF0C2A1C)]),
+                    border: Border.all(color: gold, width: 2)),
+                child: icon),
+            const SizedBox(height: 4),
+            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          ])));
+
+  @override
+  Widget build(BuildContext c) {
+    final m = MediaQuery.of(c);
+    final labels = [tr('languages'), tr('audio'), tr('account'), tr('follow')];
+    final pages = <Widget>[
+      Wrap(spacing: 8, runSpacing: 8, children: [for (final e in langs.entries) langBtn(e.key, e.value)]),
+      Column(children: [
+        audioRow(tr('music'), musicOn, musicVol, 'musicOn', 'musicVol', Bgm.apply),
+        audioRow(tr('effects'), fxOn, fxVol, 'fxOn', 'fxVol', () {}),
+        if (musicCredit.isNotEmpty)
+          Padding(padding: const EdgeInsets.only(top: 10), child: Text('♪ $musicCredit', style: const TextStyle(fontSize: 10, color: Colors.white54))),
+      ]),
+      Column(children: [
+        const SizedBox(height: 16),
+        SizedBox(width: 260, child: Btn(tr('changeAcc'), () {
+          Navigator.pop(c);
+          widget.onChangeAccount?.call();
+        }, small: true)),
+        const SizedBox(height: 14),
+        SizedBox(width: 260, child: Btn(tr('changeReg'), () {
+          Navigator.pop(c);
+          widget.onChangeRegion?.call();
+        }, small: true)),
+      ]),
+      Wrap(spacing: 8, runSpacing: 12, children: [
+        social(const Icon(Icons.language, color: gold, size: 28), tr('site'), linkSite),
+        social(const Icon(Icons.facebook, color: gold, size: 28), tr('like'), linkFacebook),
+        social(const Icon(Icons.forum, color: gold, size: 26), 'Discord', linkDiscord),
+        social(const Text('X', style: TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900)), 'Twitter', linkTwitter),
+        social(const Icon(Icons.play_circle_fill, color: gold, size: 28), 'YouTube', linkYoutube),
+      ]),
+    ];
+    return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: SizedBox(
+            width: min(m.size.width * .92, 660),
+            height: min(m.size.height * .9, 340),
+            child: GoldBox(
+                child: Column(children: [
+              Row(children: [
+                Expanded(child: Title(tr('settings'))),
+                InkWell(
+                    onTap: () => Navigator.pop(c),
+                    child: Container(
+                        width: 30, height: 30,
+                        margin: const EdgeInsets.only(bottom: 10, left: 6),
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(colors: [Color(0xFFF3D27A), Color(0xFF9A6B1F)]),
+                            border: Border.all(color: const Color(0xFFFFF2B0))),
+                        child: const Icon(Icons.close, size: 18, color: Color(0xFF2A1A04)))),
+              ]),
+              Expanded(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(width: 108, child: Column(children: [for (var i = 0; i < 4; i++) tabBtn(i, labels[i])])),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.all(10),
+                        child: SingleChildScrollView(child: pages[tab]))),
+              ])),
+            ]))));
+  }
+}
+
+// ============ ANÚNCIOS (últimas atualizações) ============
+class Ann {
+  final int kind;
+  final String date, title, body, more;
+  const Ann(this.kind, this.date, this.title, this.body, this.more);
+}
+
+// EXEMPLOS: troque por dados reais (ex.: vindos da API do jogo).
+const announcements = <Ann>[
+  Ann(0, '18/11/2026', 'Exemplo: título de uma atualização do jogo',
+      'Resumo curto da atualização. Este é apenas um texto de exemplo para mostrar o layout.',
+      'Aqui aparece o texto completo da atualização: lista de mudanças, ajustes de equilíbrio e melhorias gerais. (Texto de exemplo.)'),
+  Ann(1, '16/11/2026', 'Exemplo: anúncio de novo conteúdo',
+      'Espaço para apresentar novas áreas, itens ou masmorras. Texto de exemplo.',
+      'Detalhes do novo conteúdo: como desbloquear, recompensas e requisitos. (Texto de exemplo.)'),
+  Ann(2, '14/11/2026', 'Exemplo: evento de fim de semana',
+      'Participe e ganhe recompensas especiais por tempo limitado. Texto de exemplo.',
+      'Regras do evento, período e lista de prêmios. (Texto de exemplo.)'),
+  Ann(3, '12/11/2026', 'Exemplo: correção de erros conhecidos',
+      'Lista resumida de problemas corrigidos nesta versão. Texto de exemplo.',
+      'Correções detalhadas por área do jogo. (Texto de exemplo.)'),
+  Ann(4, '10/11/2026', 'Exemplo: manutenção programada',
+      'Os servidores ficarão indisponíveis por um curto período. Texto de exemplo.',
+      'Horário previsto, duração estimada e compensações. (Texto de exemplo.)'),
+  Ann(5, '08/11/2026', 'Exemplo: aviso importante',
+      'Comunicado geral para os jogadores. Texto de exemplo.',
+      'Texto completo do aviso. (Texto de exemplo.)'),
+];
+const annColors = [Color(0xFF4DA3FF), Color(0xFF4CD37E), Color(0xFFF0C968), Color(0xFFB58CFF), Color(0xFFFF8A4C), Color(0xFFFFD84D)];
+const annKeys = ['t0', 't1', 't2', 't3', 't4', 't5'];
+
+void openAnnouncements(BuildContext c) => showDialog(context: c, builder: (_) => const AnnouncementsDialog());
+
+class AnnouncementsDialog extends StatefulWidget {
+  const AnnouncementsDialog({super.key});
+  @override
+  State<AnnouncementsDialog> createState() => _AnnouncementsDialogState();
+}
+
+class _AnnouncementsDialogState extends State<AnnouncementsDialog> {
+  int f = -1;
+  final open = <int>{};
+
+  Widget chip(String t, int k) {
+    final on = f == k;
+    return GestureDetector(
+        onTap: () => setState(() => f = k),
+        child: Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: on ? gold : const Color(0xFF14522E), border: Border.all(color: on ? Colors.white70 : goldDk)),
+            child: Text(t, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: on ? const Color(0xFF2A1A04) : gold))));
+  }
+
+  Widget tag(String t, Color col) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(border: Border.all(color: col)),
+      child: Text(t, style: TextStyle(fontSize: 10, color: col)));
+
+  Widget card(int i) {
+    final a = announcements[i];
+    final col = annColors[a.kind];
+    final op = open.contains(i);
+    return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        decoration: BoxDecoration(
+            color: Colors.black38,
+            border: Border(left: BorderSide(color: col, width: 4), top: const BorderSide(color: goldDk),
+                right: const BorderSide(color: goldDk), bottom: const BorderSide(color: goldDk))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            tag(tr(annKeys[a.kind]), col),
+            const SizedBox(width: 6),
+            tag(tr('example'), gold),
+            const SizedBox(width: 8),
+            Text(a.date, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+          ]),
+          const SizedBox(height: 4),
+          Text(a.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(a.body, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          if (op) Padding(padding: const EdgeInsets.only(top: 6), child: Text(a.more, style: const TextStyle(fontSize: 12, color: Color(0xFFCFE8D5)))),
+          Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                  onTap: () => setState(() => op ? open.remove(i) : open.add(i)),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(op ? tr('less') : tr('details'),
+                          style: const TextStyle(color: Color(0xFF6FC3FF), fontSize: 12, decoration: TextDecoration.underline))))),
+        ]));
+  }
+
+  @override
+  Widget build(BuildContext c) {
+    final m = MediaQuery.of(c);
+    final list = [for (var i = 0; i < announcements.length; i++) if (f < 0 || announcements[i].kind == f) i];
+    return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: SizedBox(
+            width: min(m.size.width * .92, 620),
+            height: min(m.size.height * .92, 360),
+            child: GoldBox(
+                child: Column(children: [
+              Row(children: [
+                Expanded(child: Title(tr('latest'))),
+                InkWell(
+                    onTap: () => Navigator.pop(c),
+                    child: Container(
+                        width: 30, height: 30,
+                        margin: const EdgeInsets.only(bottom: 10, left: 6),
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(colors: [Color(0xFFF3D27A), Color(0xFF9A6B1F)]),
+                            border: Border.all(color: const Color(0xFFFFF2B0))),
+                        child: const Icon(Icons.close, size: 18, color: Color(0xFF2A1A04)))),
+              ]),
+              SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [chip(tr('all'), -1), for (var k = 0; k < 6; k++) chip(tr(annKeys[k]), k)])),
+              const SizedBox(height: 6),
+              Align(alignment: Alignment.centerLeft, child: Text('${list.length} ${tr('updates')}', style: const TextStyle(fontSize: 12, color: Colors.white70))),
+              const SizedBox(height: 4),
+              Expanded(child: ListView(children: [for (final i in list) card(i)])),
+              const SizedBox(height: 6),
+              Align(alignment: Alignment.centerRight, child: SizedBox(width: 130, child: Btn(tr('close').toUpperCase(), () => Navigator.pop(c), small: true))),
+            ]))));
+  }
+}
+
 // ============ TELA 1: REGIÃO ============
 class RegionPage extends StatefulWidget {
   const RegionPage({super.key});
@@ -418,6 +819,21 @@ class RegionPage extends StatefulWidget {
 
 class _RegionPageState extends State<RegionPage> {
   late String sel = prefs.getString('region') ?? regions.keys.first;
+  void _r() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    langN.addListener(_r);
+  }
+
+  @override
+  void dispose() {
+    langN.removeListener(_r);
+    super.dispose();
+  }
   @override
   Widget build(BuildContext c) => Stage(
       bg: bgRegiao,
@@ -460,12 +876,41 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   final u = TextEditingController(text: prefs.getString('user') ?? ''), p = TextEditingController();
   final api = AuthApi();
   late final list = regions[widget.region]!;
   int sel = 0;
   bool remember = prefs.getBool('remember') ?? true, busy = false;
+
+  void _r() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    langN.addListener(_r);
+    Bgm.start();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    langN.removeListener(_r);
+    Bgm.stop();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState st) {
+    if (st == AppLifecycleState.resumed) {
+      Bgm.resume();
+    } else {
+      Bgm.pause();
+    }
+  }
 
   Future<void> go() async {
     if (u.text.isEmpty || p.text.isEmpty) return snack(context, tr('fill'));
@@ -498,18 +943,17 @@ class _LoginPageState extends State<LoginPage> {
   Widget _signal(Srv s) => Icon(Icons.signal_cellular_alt, size: 22,
       color: s.status == 2 ? Colors.grey : statusCol[s.signal >= 3 ? 0 : 1]);
 
-  void langMenu() => boxDialog(context, tr('lang'), [
-        for (final e in {'pt': 'Português', 'en': 'English', 'es': 'Español'}.entries)
-          ListTile(
-              dense: true,
-              title: Text(e.value),
-              trailing: langN.value == e.key ? const Icon(Icons.check, color: gold) : null,
-              onTap: () {
-                langN.value = e.key;
-                prefs.setString('lang', e.key);
-                Navigator.pop(context);
-              })
-      ]);
+  void showSettings([int tab = 0]) => openSettings(context,
+      tab: tab,
+      onChangeAccount: () {
+        u.clear();
+        p.clear();
+        prefs.remove('user');
+        setState(() {});
+      },
+      onChangeRegion: () => Navigator.popUntil(context, (r) => r.isFirst));
+
+  void langMenu() => showSettings(0);
 
   void createDialog() {
     final cu = TextEditingController(), cp = TextEditingController(), cp2 = TextEditingController(), ce = TextEditingController();
@@ -630,10 +1074,10 @@ class _LoginPageState extends State<LoginPage> {
           Positioned(
               top: 6, right: 14,
               child: Row(children: [
-                TopBtn(Icons.card_giftcard, tr('events')),
+                TopBtn(Icons.volume_up, tr('announcements'), onTap: () => openAnnouncements(c)),
                 TopBtn(Icons.emoji_events, tr('ranking')),
                 TopBtn(Icons.article, tr('news')),
-                TopBtn(Icons.settings, tr('config')),
+                TopBtn(Icons.settings, tr('config'), onTap: () => showSettings()),
               ])),
           // painel 20% menor (escala 0.8), encolhe mais se a tela for baixa
           Positioned(
